@@ -9,6 +9,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.bytedeco.javacpp.Loader;
+import org.bytedeco.javacv.CanvasFrame;
+import org.bytedeco.javacv.OpenCVFrameConverter;
 import org.bytedeco.opencv.opencv_java;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -30,8 +32,11 @@ import com.iot.video.app.spark.util.VideoEventData;
  *
  */
 public class VideoMotionDetector implements Serializable {	
-	private static final Logger logger = Logger.getLogger(VideoMotionDetector.class);	
-	
+	private static final Logger logger = Logger.getLogger(VideoMotionDetector.class);
+
+	private static OpenCVFrameConverter.ToMat converterToMat = new OpenCVFrameConverter.ToMat();
+	private static CanvasFrame canvasFrame = new CanvasFrame("Cam");
+
 	//load native lib
 	static {
 		Loader.load(opencv_java.class);
@@ -73,6 +78,10 @@ public class VideoMotionDetector implements Serializable {
 		}
 		sortedList.sort(Comparator.comparing(VideoEventData::getTimestamp));
 		logger.warn("cameraId="+camId+" total frames="+sortedList.size());
+
+
+		final Mat firstImage = getMat(sortedList.get(0));
+		canvasFrame.setCanvasSize(firstImage.width(), firstImage.height());
 		
 		//iterate and detect motion
 		for (VideoEventData eventData : sortedList) {
@@ -95,9 +104,10 @@ public class VideoMotionDetector implements Serializable {
 					}
 					logger.warn("Motion detected for cameraId=" + eventData.getCameraId() + ", timestamp="+ eventData.getTimestamp());
 					//save image file
-					saveImage(copyFrame, eventData, outputDir);
+				//	saveImage(copyFrame, eventData, outputDir);
 				}
 			  }
+			    canvasFrame.showImage(converterToMat.convert(copyFrame));
 				firstFrame = grayFrame;
 				currentProcessedEventData = eventData;
 		   }
